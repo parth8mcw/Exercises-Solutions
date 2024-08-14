@@ -33,7 +33,6 @@ std::string kernelsource = "__kernel void mmul(                                 
 "   __global float* B,                                                  \n" \
 "   __global float* C)                                                  \n" \
 "{                                                                      \n" \
-"    // Get the row and column indexes of the C matrix element          \n" \
 "    int row = get_global_id(1);                                        \n" \
 "    int col = get_global_id(0);                                        \n" \
 "    float sum = 0.0f;                                                  \n" \
@@ -41,6 +40,50 @@ std::string kernelsource = "__kernel void mmul(                                 
 "        sum += A[row * N + k] * B[k * N + col];                        \n" \
 "    }                                                                  \n" \
 "    C[row * N + col] = sum;                                            \n" \
+"}                                                                      \n" \
+"\n";
+
+std::string c_row_cl = "__kernel void mmul(                                                    \n" \
+"    const int N,                                                       \n" \
+"    __global float* A,                                                 \n" \
+"    __global float* B,                                                 \n" \
+"    __global float* C)                                                 \n" \
+"{                                                                      \n" \
+"    int k, j;                                                          \n" \
+"    int i = get_global_id(0);                                          \n" \
+"    float tmp;                                                         \n" \
+"    if (i < N) {                                                       \n" \
+"        for (j = 0; j < N; j++) {                                      \n" \
+"            tmp = 0.0f;                                                \n" \
+"            for (k = 0; k < N; k++)                                    \n" \
+"                tmp += A[i*N+k] * B[k*N+j];                            \n" \
+"            C[i*N+j] = tmp;                                            \n" \
+"        }                                                              \n" \
+"    }                                                                  \n" \
+"}                                                                      \n" \
+"\n";
+
+std::string  crow_priv_cl = "__kernel void mmul(                                                    \n" \
+"    const int N,                                                       \n" \
+"    __global float* A,                                                 \n" \
+"    __global float* B,                                                 \n" \
+"    __global float* C)                                                 \n" \
+"{                                                                      \n" \
+"    int k, j;                                                          \n" \
+"    int i = get_global_id(0);                                          \n" \
+"    float Awrk[1024];                                                  \n" \
+"    float tmp;                                                         \n" \
+"    if (i < N) {                                                       \n" \
+"        for (k = 0; k < N; k++)                                        \n" \
+"            Awrk[k] = A[i*N+k];                                        \n" \
+"                                                                       \n" \
+"        for (j = 0; j < N; j++) {                                      \n" \
+"            tmp = 0.0f;                                                \n" \
+"            for (k = 0; k < N; k++)                                    \n" \
+"                tmp += Awrk[k] * B[k*N+j];                             \n" \
+"            C[i*N+j] = tmp;                                            \n" \
+"        }                                                              \n" \
+"    }                                                                  \n" \
 "}                                                                      \n" \
 "\n";
 
@@ -163,6 +206,76 @@ int main(int argc, char *argv[])
             queue.finish();
 
             run_time  = (static_cast<double>(timer.getTimeMilliseconds()) / 1000.0) - start_time;
+
+            cl::copy(queue, d_c, h_C.begin(), h_C.end());
+
+            results(N, h_C, run_time);
+
+        } // end for loop
+
+//--------------------------------------------------------------------------------
+// OpenCL matrix multiplication ... C row per work item
+//--------------------------------------------------------------------------------
+
+        // Create the compute program from the source buffer
+        program= cl::Program(context, c_row_cl, true);
+        // program = cl::Program(context, util::loadProgram("../C_row.cl"), true);
+
+        // Create the compute kernel from the program
+        cl::make_kernel<int, cl::Buffer, cl::Buffer, cl::Buffer> crow_mmul(program, "mmul");
+
+        printf("\n===== OpenCL, matrix mult, C row per work item, order %d ======\n",N);
+
+        // Do the multiplication COUNT times
+        for (int i = 0; i < COUNT; i++)
+        {
+            zero_mat(N, h_C);
+
+            start_time = static_cast<double>(timer.getTimeMilliseconds()) / 1000.0;
+
+            cl::NDRange global(N);
+            crow_mmul(cl::EnqueueArgs(queue, global),
+                    N, d_a, d_b, d_c);
+
+            queue.finish();
+
+            run_time  = static_cast<double>(timer.getTimeMilliseconds()) / 1000.0 - start_time;
+
+            cl::copy(queue, d_c, h_C.begin(), h_C.end());
+
+            results(N, h_C, run_time);
+
+        } // end for loop
+
+//--------------------------------------------------------------------------------
+// OpenCL matrix multiplication ... C row per work item, A row in pivate memory
+//--------------------------------------------------------------------------------
+
+        // Create the compute program from the source buffer
+        program= cl::Program(context, crow_priv_cl, true);
+        // program = cl::Program(context, util::loadProgram("../C_row_priv.cl"), true);
+
+        // Create the compute kernel from the program
+        cl::make_kernel<int, cl::Buffer, cl::Buffer, cl::Buffer> arowpriv_mmul(program, "mmul");
+
+        printf("\n===== OpenCL, matrix mult, C row, A row in priv mem, order %d ======\n",N);
+
+        // Do the multiplication COUNT times
+        for (int i = 0; i < COUNT; i++)
+        {
+            zero_mat(N, h_C);
+
+            start_time = static_cast<double>(timer.getTimeMilliseconds()) / 1000.0;
+
+
+            cl::NDRange global(N);
+            cl::NDRange local(ORDER / 16);
+            arowpriv_mmul(cl::EnqueueArgs(queue, global, local),
+                    N, d_a, d_b, d_c);
+
+            queue.finish();
+
+            run_time  = static_cast<double>(timer.getTimeMilliseconds()) / 1000.0 - start_time;
 
             cl::copy(queue, d_c, h_C.begin(), h_C.end());
 

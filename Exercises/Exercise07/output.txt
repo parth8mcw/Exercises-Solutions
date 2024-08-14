@@ -1,0 +1,15 @@
+PS C:\Users\mcw\Documents\opencl\Exercises-Solutions\Exercises\Exercise07\CPP> .\matmul.exe    
+
+Using OpenCL device: Intel(R) UHD Graphics
+
+===== Sequential, matrix mult (dot prod), order 1024 on host CPU ======
+ 6.32 seconds at 340.0 MFLOPS 
+
+===== OpenCL, matrix mult, C(i,j) per work item, order 1024 ======
+ 0.03 seconds at 61356.7 MFLOPS 
+
+===== OpenCL, matrix mult, C row per work item, order 1024 ======
+ 1.97 seconds at 1091.2 MFLOPS 
+
+===== OpenCL, matrix mult, C row, A row in priv mem, order 1024 ======
+ 0.44 seconds at 4936.7 MFLOPS 

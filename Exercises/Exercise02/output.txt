@@ -1,0 +1,6 @@
+PS C:\Users\mcw\Documents\opencl\Exercises-Solutions\Exercises\Exercise02\c> .\vadd_c.exe
+ 
+ Device is  Intel(R) UHD Graphics  GPU from  Intel(R) Corporation  with a max of 80 compute units
+
+The kernel ran in 0.001026 seconds
+C = A+B:  1024 out of 1024 results were correct.

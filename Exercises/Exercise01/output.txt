@@ -1,0 +1,21 @@
+
+Number of OpenCL plaforms: 1
+
+-------------------------
+Platform: Intel(R) OpenCL Graphics
+        Vendor:  Intel(R) Corporation
+        Version: OpenCL 3.0
+
+        Number of devices: 1
+        -------------------------
+                Name: Intel(R) UHD Graphics
+                Version: OpenCL C 1.2
+                Max. Compute Units: 80
+                Local Memory Size: 64 KB
+                Global Memory Size: 7089 MB
+                Max Alloc Size: 3544 MB
+                Max Work-group Total Size: 512
+                Max Work-group Dims: (512 512 512)
+        -------------------------
+
+-------------------------

@@ -1,0 +1,4 @@
+PS C:\Users\mcw\Documents\opencl\Exercises-Solutions\Exercises\Exercise05\Cpp> .\vadd.exe                                        
+
+The kernels ran in 0.001000 seconds
+vector add to find C = A+B+D:  1024 out of 1024 results were correct.

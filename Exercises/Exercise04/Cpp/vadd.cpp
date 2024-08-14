@@ -43,11 +43,20 @@ int main(void)
 {
     std::vector<float> h_a(LENGTH);                // a vector 
     std::vector<float> h_b(LENGTH);                // b vector 	
+    std::vector<float> h_e (LENGTH);               // e vector
+    std::vector<float> h_g (LENGTH);               // g vector
     std::vector<float> h_c(LENGTH, 0xdeadbeef);    // c = a + b, from compute device
+    std::vector<float> h_d (LENGTH, 0xdeadbeef);   // D = C + E,
+    std::vector<float> h_f (LENGTH, 0xdeadbeef);   // F = D + G;
 
-    cl::Buffer d_a;                        // device memory used for the input  a vector
-    cl::Buffer d_b;                        // device memory used for the input  b vector
+
+    cl::Buffer d_a;                       // device memory used for the input  a vector
+    cl::Buffer d_b;                       // device memory used for the input  b vector
     cl::Buffer d_c;                       // device memory used for the output c vector
+    cl::Buffer d_d;                       // device memory used for the output d vector
+    cl::Buffer d_e;                       // device memory used for the input e vector
+    cl::Buffer d_f;                       // device memory used for the output f vector
+    cl::Buffer d_g;                       // device memory used for the input g vector
 
     // Fill vectors a and b with random float values
     int count = LENGTH;
@@ -55,6 +64,8 @@ int main(void)
     {
         h_a[i]  = rand() / (float)RAND_MAX;
         h_b[i]  = rand() / (float)RAND_MAX;
+        h_e[i]  = rand() / (float)RAND_MAX;
+        h_g[i]  = rand() / (float)RAND_MAX;
     }
 
     try 
@@ -75,8 +86,12 @@ int main(void)
 
         d_a   = cl::Buffer(context, h_a.begin(), h_a.end(), true);
         d_b   = cl::Buffer(context, h_b.begin(), h_b.end(), true);
+        d_e   = cl::Buffer(context, h_e.begin(), h_e.end(), true);
+        d_g   = cl::Buffer(context, h_g.begin(), h_g.end(), true);
 
-        d_c  = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * LENGTH);
+        d_c  = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(float) * LENGTH);
+        d_d  = cl::Buffer(context, CL_MEM_READ_WRITE, sizeof(float) * LENGTH);
+        d_f  = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * LENGTH);
 
         util::Timer timer;
 
@@ -89,26 +104,43 @@ int main(void)
             d_c,
             count);
 
-        queue.finish();
+        vadd(
+            cl::EnqueueArgs(
+                queue,
+                cl::NDRange(count)), 
+            d_e,
+            d_c,
+            d_d,
+            count);
+        vadd(
+            cl::EnqueueArgs(
+                queue,
+                cl::NDRange(count)), 
+            d_g,
+            d_d,
+            d_f,
+            count);
+
+        //queue.finish();
 
         double rtime = static_cast<double>(timer.getTimeMilliseconds()) / 1000.0;
         printf("\nThe kernels ran in %lf seconds\n", rtime);
 
-        cl::copy(queue, d_c, h_c.begin(), h_c.end());
+        cl::copy(queue, d_f, h_f.begin(), h_f.end());
 
         // Test the results
         int correct = 0;
         float tmp;
         for(int i = 0; i < count; i++) {
-            tmp = h_a[i] + h_b[i]; // expected value for d_c[i]
-            tmp -= h_c[i];                      // compute errors
+            tmp = h_a[i] + h_b[i] + h_e[i] + h_g[i];
+            tmp -= h_f[i];                     // compute errors
             if(tmp*tmp < TOL*TOL) {      // correct if square deviation is less 
                 correct++;                         //  than tolerance squared
             }
             else {
 
                 printf(
-                    " tmp %f h_a %f h_b %f  h_c %f \n",
+                    " tmp %f h_a %f h_b %f  h_c %f h_\n",
                     tmp, 
                     h_a[i], 
                     h_b[i], 

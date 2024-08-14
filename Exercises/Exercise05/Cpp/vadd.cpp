@@ -2,9 +2,9 @@
 //
 // Name:       vadd_cpp.cpp
 // 
-// Purpose:    Elementwise addition of two vectors (c = a + b)
+// Purpose:    Elementwise addition of two vectors (c = a + b +d)
 //
-//                   c = a + b
+//                   c = a + b +d
 //
 // HISTORY:    Written by Tim Mattson, June 2011
 //             Ported to C++ Wrapper API by Benedict Gaster, September 2011
@@ -43,10 +43,12 @@ int main(void)
 {
     std::vector<float> h_a(LENGTH);                // a vector 
     std::vector<float> h_b(LENGTH);                // b vector 	
-    std::vector<float> h_c (LENGTH, 0xdeadbeef);    // c = a + b, from compute device
+    std::vector<float> h_d(LENGTH);                // d vector 	
+    std::vector<float> h_c (LENGTH, 0xdeadbeef);    // c = a + b + d, from compute device
 
     cl::Buffer d_a;                        // device memory used for the input  a vector
     cl::Buffer d_b;                        // device memory used for the input  b vector
+    cl::Buffer d_d;                        // device memory used for the input  d vector
     cl::Buffer d_c;                       // device memory used for the output c vector
 
     // Fill vectors a and b with random float values
@@ -55,6 +57,7 @@ int main(void)
     {
         h_a[i]  = rand() / (float)RAND_MAX;
         h_b[i]  = rand() / (float)RAND_MAX;
+        h_d[i]  = rand() / (float)RAND_MAX;
     }
 
     try 
@@ -71,11 +74,11 @@ int main(void)
 
         // Create the kernel functor
  
-        auto vadd = cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer, int>(program, "vadd");
+        auto vadd = cl::make_kernel<cl::Buffer,cl::Buffer, cl::Buffer, cl::Buffer, int>(program, "vadd");
 
         d_a   = cl::Buffer(context, begin(h_a), end(h_a), true);
         d_b   = cl::Buffer(context, begin(h_b), end(h_b), true);
-
+        d_d   = cl::Buffer(context, begin(h_d), end(h_d), true);
         d_c  = cl::Buffer(context, CL_MEM_WRITE_ONLY, sizeof(float) * LENGTH);
 
         util::Timer timer;
@@ -86,6 +89,7 @@ int main(void)
                 cl::NDRange(count)), 
             d_a,
             d_b,
+            d_d,
             d_c,
             count);
 
@@ -100,7 +104,7 @@ int main(void)
         int correct = 0;
         float tmp;
         for(int i = 0; i < count; i++) {
-            tmp = h_a[i] + h_b[i]; // expected value for d_c[i]
+            tmp = h_a[i] + h_b[i] + h_d[i]; // expected value for d_c[i]
             tmp -= h_c[i];                      // compute errors
             if(tmp*tmp < TOL*TOL) {      // correct if square deviation is less 
                 correct++;                         //  than tolerance squared
@@ -108,17 +112,18 @@ int main(void)
             else {
 
                 printf(
-                    " tmp %f h_a %f h_b %f  h_c %f \n",
+                    " tmp %f h_a %f h_b %f h_d %f h_c %f \n",
                     tmp, 
                     h_a[i], 
-                    h_b[i], 
+                    h_b[i],
+                    h_d[i], 
                     h_c[i]);
             }
         }
 
         // summarize results
         printf(
-            "vector add to find C = A+B:  %d out of %d results were correct.\n", 
+            "vector add to find C = A+B+D:  %d out of %d results were correct.\n", 
             correct, 
             count);
     }

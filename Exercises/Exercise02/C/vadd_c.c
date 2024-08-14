@@ -111,8 +111,12 @@ int main(int argc, char** argv)
     }
 
     // Get all platforms
-    cl_platform_id Platform[numPlatforms];
+    // cl_platform_id Platform[numPlatforms];
+    cl_platform_id *Platform = (cl_platform_id*)malloc(numPlatforms * sizeof(cl_platform_id));
     err = clGetPlatformIDs(numPlatforms, Platform, NULL);
+    if (err != CL_SUCCESS) {
+        free(Platform);
+    }
     checkError(err, "Getting platforms");
 
     // Secure a GPU
@@ -237,7 +241,7 @@ int main(int argc, char** argv)
     free(h_a);
     free(h_b);
     free(h_c);
-
+    free(Platform);
     return 0;
 }
 

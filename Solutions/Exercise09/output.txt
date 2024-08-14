@@ -1,0 +1,7 @@
+PS C:\Users\mcw\Documents\opencl\ES\Exercises\Exercise09\Cpp> .\pi.exe
+
+Using OpenCL device: Intel(R) UHD Graphics
+ 1 work groups of size 512.  134217728 Integration steps
+
+The calculation ran in 0.036000 seconds
+ pi = 3.141887 for 134217728 steps
